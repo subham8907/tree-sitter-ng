@@ -146,17 +146,32 @@ abstract class Utils {
     }
 
     static void downloadFile(URL url, File dest, String accept = "application/zip"){
-        url.openConnection().with { conn ->
-            conn.setRequestProperty("User-Agent", "Mozilla/5.0")
-            conn.setRequestProperty("Accept", accept)
-            conn.setConnectTimeout(30000)
-            conn.setReadTimeout(30000)
-            dest.withOutputStream { output ->
-                conn.inputStream.withCloseable { input ->
-                    output << input
+        int maxAttempts = 6
+        Exception lastException = null
+        for (int attempt = 1; attempt <= maxAttempts; attempt++) {
+            try {
+                url.openConnection().with { conn ->
+                    conn.setRequestProperty("User-Agent", "Mozilla/5.0")
+                    conn.setRequestProperty("Accept", accept)
+                    conn.setConnectTimeout(30000)
+                    conn.setReadTimeout(30000)
+                    dest.withOutputStream { output ->
+                        conn.inputStream.withCloseable { input ->
+                            output << input
+                        }
+                    }
                 }
+                return
+            } catch (IOException e) {
+                lastException = e
+                dest.delete()
+                if (attempt == maxAttempts) {
+                    break
+                }
+                Thread.sleep(2000L * attempt)
             }
         }
+        throw lastException
     }
 
     static String fetchUrl(URL url){

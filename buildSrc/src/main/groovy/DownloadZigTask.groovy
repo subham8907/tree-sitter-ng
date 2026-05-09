@@ -152,20 +152,22 @@ class DownloadZigTask extends DefaultTask{
                 logger.lifecycle("Downloading Zig from mirror: $zigZipUrl")
                 Utils.downloadFile(zigZipUrl, zigZipDest)
                 Utils.downloadFile(new URL(zigSignatureUrl(zigZipUrl.toString())), zigSignatureFileDest)
-                return
+                if (verifyZigArchive()) {
+                    return
+                }
+                logger.error("Zig archive signature does not match for mirror: $zigZipUrl")
             }catch(Exception e){
                 logger.error("Failed to download Zig from mirror: $zigZipUrl", e)
             }
+            zigZipDest.delete()
+            zigSignatureFileDest.delete()
         }
         throw new GradleException("Failed to download Zig from any mirror")
     }
 
-    @TaskAction
-    downloadZig(){
-        def mirrorUrls = mirrorUrls()
-        downloadZigFromMirrors(mirrorUrls, zigZipFile.asFile, zigSignatureFile.asFile)
+    boolean verifyZigArchive() {
         miniSignExe.asFile.setExecutable(true, true)
-        def zipVerified = project.exec {
+        return project.providers.exec {
             ignoreExitValue = true
             workingDir zigDir.asFile
             commandLine miniSignExe,
@@ -173,10 +175,19 @@ class DownloadZigTask extends DefaultTask{
                            zigZipFile,
                            "-P",
                            zigPubKey
+        }.result.get().exitValue == 0
+    }
+
+    @TaskAction
+    downloadZig(){
+        if (zigExe.asFile.exists()) {
+            logger.lifecycle("Using downloaded Zig: {}", zigExe.asFile)
+            zigExe.asFile.setExecutable(true, true)
+            return
         }
-        if(!zipVerified) {
-            throw new GradleException("$zigZipFile signature does not match!")
-        }
+        def mirrorUrls = mirrorUrls()
+        mirrorUrls.add("https://ziglang.org/download/$zigVersion")
+        downloadZigFromMirrors(mirrorUrls, zigZipFile.asFile, zigSignatureFile.asFile)
         Utils.unzipArchive(zigZipFile.asFile, zigDir.asFile)
         zigExe.asFile.setExecutable(true, true)
     }
