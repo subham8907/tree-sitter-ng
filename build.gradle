@@ -106,11 +106,14 @@ subprojects {
     tasks.register('downloadSource', DownloadSourceTask)
 
     if (project.name != 'tree-sitter' && project.name != 'tree-sitter-demo' && project.name != 'tree-sitter-tests') {
-        tasks.named('test') {
-            dependsOn tasks.named('downloadSource')
-        }
         tasks.named('processResources') {
             dependsOn tasks.named('buildNative')
+        }
+    }
+
+    if (project.name != 'tree-sitter' && project.name != 'tree-sitter-demo' && project.name != 'tree-sitter-tests') {
+        tasks.named('test') {
+            dependsOn tasks.named('downloadSource')
         }
     }
 
