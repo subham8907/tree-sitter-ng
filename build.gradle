@@ -114,6 +114,10 @@ subprojects {
             }
         }
 
+        tasks.named('processResources') {
+            dependsOn tasks.named('buildNative')
+        }
+
         if (project.name != 'tree-sitter') {
             tasks.named('test') {
                 dependsOn tasks.named('downloadSource')
