@@ -114,6 +114,13 @@ subprojects {
             }
         }
 
+        // buildNative writes native libs directly into src/main/resources/lib, which
+        // processResources also reads. Without this, Gradle's task validation flags an
+        // undeclared dependency and, depending on scheduling, fails the build outright.
+        tasks.named('processResources') {
+            dependsOn tasks.named('buildNative')
+        }
+
         if (project.name != 'tree-sitter') {
             tasks.named('test') {
                 dependsOn tasks.named('downloadSource')
